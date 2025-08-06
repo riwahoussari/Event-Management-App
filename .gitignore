@@ -1,0 +1,11 @@
+# Root-level ignores
+node_modules/
+.env
+
+# Ignore server files
+/server/node_modules/
+/server/.env
+
+# Ignore client files
+/client/node_modules/
+/client/.env
