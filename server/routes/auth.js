@@ -1,3 +1,116 @@
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - fullname
+ *               - gender
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: name@domain.com
+ *               password:
+ *                 type: string
+ *                 example: my strong password
+ *               fullname:
+ *                 type: string
+ *                 example: John Doe
+ *               gender:
+ *                 type: string
+ *                 enum: [male, female]
+ *                 example: male
+ *               phone_number:
+ *                 type: string
+ *                 example: +961 71 123 123
+ *                 description: must be a valid international phone number
+ *               birthday:
+ *                 type: string
+ *                 format: "YYYY-MM-DD"
+ *                 example: 2000-01-01
+ *
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Bad request
+ *       409:
+ *         description: Email already exists
+ *
+ */
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: name@domain.com
+ *               password:
+ *                 type: string
+ *                 example: my strong password
+ *
+ *     responses:
+ *       200:
+ *         description: User logged in successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Invalid email or password
+ *
+ */
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Log out the current user
+ *     tags: [Auth]
+ *     description: Logs out the user by clearing the authentication cookie. Client must send request with credentials (cookies) included.
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ *       400:
+ *         description: No token cookie found
+ */
+
+/**
+ * @swagger
+ * /api/auth/validate-user:
+ *   get:
+ *     summary: Checks user authorization (JWT)
+ *     tags: [Auth]
+ *     description: Validates JWT token from cookies. Client must send request with credentials (cookies) included.
+ *     responses:
+ *       200:
+ *         description: Valid token. Authorized User
+ *       401:
+ *         description: Missing token. Unauthorized
+ *       403:
+ *         description: Invalid token. Forbidden
+ */
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const db = require("../db/db-connection");
@@ -76,7 +189,9 @@ router.post("/register", async (req, res) => {
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
-        return res.status(201).json({ user: payload , message: "User created successfully" });
+        return res
+          .status(201)
+          .json({ user: payload, message: "User created successfully" });
       }
     );
   } catch (error) {
@@ -129,12 +244,20 @@ router.post("/login", (req, res) => {
 
 // LOGOUT
 router.post("/logout", (req, res) => {
-  // Clear the cookie named 'token'
+  const token = req.cookies.token; // requires cookie-parser middleware
+
+  if (!token) {
+    return res
+      .status(400)
+      .json({ error: "No token found. Already logged out?" });
+  }
+
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   });
+
   res.status(200).json({ message: "Logged out successfully" });
 });
 
