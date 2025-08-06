@@ -80,7 +80,7 @@ const router = express.Router();
 
 // GET /api/categories – Get all categories
 router.get("/", authMiddleware, (req, res) => {
-  let query = "SELECT category_name FROM categories";
+  let query = "SELECT id, category_name FROM categories";
   if (req.user.account_type === "admin") {
     query = "SELECT * FROM categories";
   }
