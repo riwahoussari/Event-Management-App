@@ -73,7 +73,8 @@ function createTables() {
             cancellation_deadline_date TEXT NOT NULL, -- 'YYYY-MM-DD'
             cancellation_deadline_time TEXT NOT NULL, -- 'HH:MM'
             views_count INTEGER DEFAULT 0,
-            status TEXT NOT NULL CHECK(status IN ('active', 'cancelled', 'removed')) DEFAULT 'active',
+            status TEXT NOT NULL CHECK(status IN ('active', 'cancelled', 'deleted')) DEFAULT 'active',
+            suspended TEXT NOT NULL CHECK(suspended IN ('true', 'false')) DEFAULT 'false',
             FOREIGN KEY (organizer_id) REFERENCES users(id),
             FOREIGN KEY (category) REFERENCES categories(id)
         );
