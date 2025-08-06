@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/auth");
+const categoriesRoutes = require("./routes/categories");
 const { swaggerUi, swaggerSpec } = require("./swagger");
 
 // Server Setup
@@ -21,6 +22,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Auth Routes
 app.use("/api/auth", authRoutes);
+
+// Categories Routes
+app.use("/api/categories", categoriesRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log("Server running on port " + process.env.PORT)

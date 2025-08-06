@@ -1,5 +1,5 @@
-const swaggerJSDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
+const swaggerJSDoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
 
 const options = {
   definition: {
@@ -9,6 +9,20 @@ const options = {
       version: "1.0.0",
       description: "API docs for my event management app",
     },
+    components: {
+      securitySchemes: {
+        cookieAuth: {
+          type: "apiKey",
+          in: "cookie",
+          name: "token",
+        },
+      },
+    },
+    security: [
+      {
+        cookieAuth: [],
+      },
+    ],
     servers: [
       {
         url: "http://localhost:5000", // your server base URL
