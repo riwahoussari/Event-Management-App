@@ -61,7 +61,6 @@ router.post("/register", async (req, res) => {
         // return token and data
         const payload = {
           id: this.lastID,
-          email: email,
           account_type: "regular",
         };
 
@@ -77,7 +76,7 @@ router.post("/register", async (req, res) => {
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
-        return res.status(201).json({ message: "User created successfully" });
+        return res.status(201).json({ user: payload , message: "User created successfully" });
       }
     );
   } catch (error) {
@@ -109,7 +108,6 @@ router.post("/login", (req, res) => {
     // return token and data
     const payload = {
       id: user.id,
-      email: user.email,
       account_type: user.account_type,
     };
 
@@ -125,7 +123,7 @@ router.post("/login", (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
-    res.status(200).json({ message: "Login successful" });
+    res.status(200).json({ user: payload, message: "Login successful" });
   });
 });
 
@@ -142,9 +140,9 @@ router.post("/logout", (req, res) => {
 
 // VALIDATE USER
 router.get("/validate-user", authenticateToken, (req, res) => {
-  // req.user is set by authenticateToken middleware ({id, email, account_type})
+  // req.user is set by authenticateToken middleware ({id, account_type})
   // if failed authentication middleware already returned an error
-  res.json({ user: req.user });
+  res.status(200).json({ user: req.user });
 });
 
 module.exports = router;
