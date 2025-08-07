@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/auth");
+const usersRoutes = require("./routes/users")
 const categoriesRoutes = require("./routes/categories");
 const eventsRoutes = require("./routes/events");
 const likesRoutes = require("./routes/likes")
@@ -27,6 +28,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Auth Routes
 app.use("/api/auth", authRoutes);
 
+// Users Routes
+app.user("/api/users", usersRoutes)
+
 // Categories Routes
 app.use("/api/categories", categoriesRoutes);
 
@@ -40,7 +44,7 @@ app.use("/api/events", likesRoutes);
 app.use("/api/events", registrationRoutes);
 
 // Promotion Requests Routes
-app.use("/api/events", promotionRequestsRoutes);
+app.use("/api/promotion-requests", promotionRequestsRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log("Server running on port " + process.env.PORT)
