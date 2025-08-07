@@ -111,6 +111,18 @@
  *     responses:
  *       200:
  *         description: Valid token. Authorized User
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 user: 
+ *                   type: object
+ *                   properties: 
+ *                     id: 
+ *                       type: integer
+ *                     account_type:
+ *                       type: string
  *       401:
  *         description: Missing token. Unauthorized
  *       403:
