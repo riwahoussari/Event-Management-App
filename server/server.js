@@ -29,7 +29,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
 
 // Users Routes
-app.user("/api/users", usersRoutes)
+app.use("/api/users", usersRoutes)
 
 // Categories Routes
 app.use("/api/categories", categoriesRoutes);
