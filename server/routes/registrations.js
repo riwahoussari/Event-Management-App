@@ -1,5 +1,10 @@
 /**
  * @swagger
+ * tags:
+ *   name: Registrations
+ */
+/**
+ * @swagger
  *  /api/events/{id}/register:
  *    post:
  *      tags:

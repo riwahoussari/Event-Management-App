@@ -1,5 +1,11 @@
 /**
  * @swagger
+ * tags:
+ *   name: Auth
+ */
+
+/**
+ * @swagger
  * /api/auth/register:
  *   post:
  *     summary: Register a new user

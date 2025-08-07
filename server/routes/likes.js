@@ -1,5 +1,11 @@
 /**
  * @swagger
+ * tags:
+ *   name: Likes
+ */
+
+/**
+ * @swagger
  * /api/events/{id}/like:
  *   post:
  *     summary: Like an event

@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Categories
+ */
+
 /** 
 * @swagger
 * paths:

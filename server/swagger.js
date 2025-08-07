@@ -28,6 +28,26 @@ const options = {
         url: "http://localhost:5000", // your server base URL
       },
     ],
+    tags: [
+      {
+        name: "Auth",
+      },
+      {
+        name: "Events",
+      },
+      {
+        name: "Categories",
+      },
+      {
+        name: "Registrations",
+      },
+      {
+        name: "Likes",
+      },
+      {
+        name: "Promotion Requests",
+      },
+    ],
   },
   apis: ["./routes/*.js"], // path to your route files with Swagger comments
 };

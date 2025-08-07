@@ -1,5 +1,11 @@
 /**
  * @swagger
+ * tags:
+ *   name: Events
+ */
+
+/**
+ * @swagger
  * /api/events:
  *   get:
  *     summary: Retrieve a list of public events
