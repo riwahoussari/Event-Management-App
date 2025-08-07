@@ -33,6 +33,9 @@ const options = {
         name: "Auth",
       },
       {
+        name: "Users",
+      },
+      {
         name: "Events",
       },
       {

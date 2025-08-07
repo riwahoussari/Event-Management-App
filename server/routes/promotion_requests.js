@@ -79,7 +79,7 @@
 /**
  * @swagger
  * /api/promotion-requests/{userId}/accept:
- *   post:
+ *   patch:
  *     summary: Accept a promotion request (admin only)
  *     description: Admins approve the promotion request and promote user to organizer
  *     tags: [Promotion Requests]
@@ -105,7 +105,7 @@
 /**
  * @swagger
  * /api/promotion-requests/{userId}/reject:
- *   post:
+ *   patch:
  *     summary: Reject a promotion request (admin only)
  *     description: Admins reject a pending promotion request
  *     tags: [Promotion Requests]
@@ -194,8 +194,8 @@ router.get("/", authMiddleware, (req, res) => {
   });
 });
 
-// POST /api/promotion-requests/:userId/accept – approve request
-router.post("/:userId/accept", authMiddleware, (req, res) => {
+// PATCH /api/promotion-requests/:userId/accept – approve request
+router.patch("/:userId/accept", authMiddleware, (req, res) => {
   if (req.user.account_type !== "admin") {
     return res
       .status(403)
@@ -227,8 +227,8 @@ router.post("/:userId/accept", authMiddleware, (req, res) => {
   });
 });
 
-// POST /api/promotion-requests/:userId/reject – reject request
-router.post("/:userId/reject", authMiddleware, (req, res) => {
+// PATCH /api/promotion-requests/:userId/reject – reject request
+router.patch("/:userId/reject", authMiddleware, (req, res) => {
   if (req.user.account_type !== "admin") {
     return res
       .status(403)
