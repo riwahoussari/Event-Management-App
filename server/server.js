@@ -7,6 +7,7 @@ const categoriesRoutes = require("./routes/categories");
 const eventsRoutes = require("./routes/events");
 const likesRoutes = require("./routes/likes")
 const registrationRoutes = require("./routes/registrations")
+const promotionRequestsRoutes = require('./routes/promotion_requests')
 const { swaggerUi, swaggerSpec } = require("./swagger");
 
 // Server Setup
@@ -37,6 +38,9 @@ app.use("/api/events", likesRoutes);
 
 // Registration Routes
 app.use("/api/events", registrationRoutes);
+
+// Promotion Requests Routes
+app.use("/api/events", promotionRequestsRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log("Server running on port " + process.env.PORT)
