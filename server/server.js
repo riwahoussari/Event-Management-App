@@ -5,6 +5,8 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/auth");
 const categoriesRoutes = require("./routes/categories");
 const eventsRoutes = require("./routes/events");
+const likesRoutes = require("./routes/likes")
+const registrationRoutes = require("./routes/registrations")
 const { swaggerUi, swaggerSpec } = require("./swagger");
 
 // Server Setup
@@ -29,6 +31,12 @@ app.use("/api/categories", categoriesRoutes);
 
 // Events Routes
 app.use("/api/events", eventsRoutes);
+
+// Likes Routes
+app.use("/api/events", likesRoutes);
+
+// Registration Routes
+app.use("/api/events", registrationRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log("Server running on port " + process.env.PORT)

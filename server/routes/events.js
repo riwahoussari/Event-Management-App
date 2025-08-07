@@ -629,7 +629,7 @@ router.post("/", authMiddleware, (req, res) => {
   ];
 
   if (requiredFields.some((field) => field === undefined)) {
-    return res.status(400).json({ message: "Missing required fields." });
+    return res.status(400).json({ error: "Missing required fields." });
   }
 
   const sql = `
@@ -672,7 +672,7 @@ router.post("/", authMiddleware, (req, res) => {
   db.run(sql, params, function (err) {
     if (err) {
       console.error("Error creating event:", err.message);
-      return res.status(500).json({ message: "Internal server error." });
+      return res.status(500).json({ error: "Internal server error." });
     }
 
     res.status(201).json({
@@ -706,8 +706,8 @@ router.patch("/:id", authMiddleware, (req, res) => {
   } = req.body;
 
   db.get("SELECT * FROM events WHERE id = ?", [eventId], (err, event) => {
-    if (err) return res.status(500).json({ message: "DB error" });
-    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (!event) return res.status(404).json({ error: "Event not found" });
 
     const isOwner = user.id === event.organizer_id;
     const isAdmin = user.account_type === "admin";
@@ -719,7 +719,7 @@ router.patch("/:id", authMiddleware, (req, res) => {
           `UPDATE events SET suspended = ? WHERE id = ?`,
           [suspended, eventId],
           function (err) {
-            if (err) return res.status(500).json({ message: "Update failed" });
+            if (err) return res.status(500).json({ error: "Update failed" });
             return res
               .status(200)
               .json({ message: "Event updated by admin (suspended changed)" });
@@ -750,7 +750,7 @@ router.patch("/:id", authMiddleware, (req, res) => {
       event.status === "deleted" ||
       event.suspended === "true"
     ) {
-      return res.status(400).json({ message: "Cannot update inactive events" });
+      return res.status(400).json({ error: "Cannot update inactive events" });
     }
 
     // prevent updating if event has started
@@ -792,7 +792,7 @@ router.patch("/:id", authMiddleware, (req, res) => {
     });
 
     if (updates.length === 0) {
-      return res.status(400).json({ message: "No valid fields to update" });
+      return res.status(400).json({ error: "No valid fields to update" });
     }
 
     const sql = `UPDATE events SET ${updates.join(", ")} WHERE id = ?`;
