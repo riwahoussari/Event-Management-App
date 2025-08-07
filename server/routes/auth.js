@@ -47,11 +47,46 @@
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 user: 
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     account_type: 
+ *                       type: string
  *       400:
  *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
  *       409:
  *         description: Email already exists
- *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
+ * 
  */
 
 /**
@@ -80,10 +115,45 @@
  *     responses:
  *       200:
  *         description: User logged in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 user: 
+ *                   type: object
+ *                   properties: 
+ *                     id: 
+ *                       type: integer
+ *                     account_type:
+ *                       type: string
  *       400:
  *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
  *       401:
  *         description: Invalid email or password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string 
  *
  */
 
@@ -125,8 +195,22 @@
  *                       type: string
  *       401:
  *         description: Missing token. Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
  *       403:
  *         description: Invalid token. Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties: 
+ *                 error: 
+ *                   type: string
  */
 
 const express = require("express");
@@ -209,7 +293,7 @@ router.post("/register", async (req, res) => {
 
         return res
           .status(201)
-          .json({ user: payload, message: "User created successfully" });
+          .json({ user: payload });
       }
     );
   } catch (error) {
@@ -256,7 +340,7 @@ router.post("/login", (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
-    res.status(200).json({ user: payload, message: "Login successful" });
+    res.status(200).json({ user: payload });
   });
 });
 
