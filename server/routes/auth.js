@@ -51,13 +51,13 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 user: 
+ *               properties:
+ *                 user:
  *                   type: object
  *                   properties:
  *                     id:
  *                       type: integer
- *                     account_type: 
+ *                     account_type:
  *                       type: string
  *       400:
  *         description: Bad request
@@ -65,8 +65,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  *       409:
  *         description: Email already exists
@@ -74,8 +74,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  *       500:
  *         description: Internal Server Error
@@ -83,10 +83,10 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
- * 
+ *
  */
 
 /**
@@ -119,11 +119,11 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 user: 
+ *               properties:
+ *                 user:
  *                   type: object
- *                   properties: 
- *                     id: 
+ *                   properties:
+ *                     id:
  *                       type: integer
  *                     account_type:
  *                       type: string
@@ -133,8 +133,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  *       401:
  *         description: Invalid email or password
@@ -142,8 +142,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  *       500:
  *         description: Internal Server Error
@@ -151,9 +151,9 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
- *                   type: string 
+ *               properties:
+ *                 error:
+ *                   type: string
  *
  */
 
@@ -167,8 +167,24 @@
  *     responses:
  *       200:
  *         description: Successfully logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Logged out successfully'
  *       400:
  *         description: No token cookie found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: 'No token found. Already logged out?'
  */
 
 /**
@@ -185,11 +201,11 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 user: 
+ *               properties:
+ *                 user:
  *                   type: object
- *                   properties: 
- *                     id: 
+ *                   properties:
+ *                     id:
  *                       type: integer
  *                     account_type:
  *                       type: string
@@ -199,8 +215,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  *       403:
  *         description: Invalid token. Forbidden
@@ -208,8 +224,8 @@
  *           application/json:
  *             schema:
  *               type: object
- *               properties: 
- *                 error: 
+ *               properties:
+ *                 error:
  *                   type: string
  */
 
@@ -264,7 +280,7 @@ router.post("/register", async (req, res) => {
         birthday || null,
         today,
       ],
-      (err) => {
+      function (err) {
         if (err) {
           if (err.message.includes("UNIQUE constraint failed")) {
             return res.status(409).json({ error: "Email already exists." });
@@ -291,9 +307,7 @@ router.post("/register", async (req, res) => {
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
-        return res
-          .status(201)
-          .json({ user: payload });
+        return res.status(201).json({ user: payload });
       }
     );
   } catch (error) {
