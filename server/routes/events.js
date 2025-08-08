@@ -8,23 +8,41 @@
  * @swagger
  * /api/events:
  *   get:
- *     summary: Retrieve a list of public events
+ *     summary: Retrieve a list of events available to the authenticated user
  *     description: >
- *       Returns a list of active events with optional filters, sorting, and pagination.
- *       Supports filtering by category, city, date range, and searching by title or organizer name.
+ *       Returns a list of events with optional filters, sorting, and pagination.
+ *       Filters include: liked, registered, categories, city, date range, ongoing, completed, and text search.
  *       Sorting options include:
  *       - closest (by start date) (default)
  *       - popular (by number of registrations)
  *       - deadline (by closest registration deadline)
+ *       Results vary based on user role:
+ *       - No one can see deleted events
+ *       - Regular users cannot see suspended 
+ *       - Organizers can see their own suspended events
  *     tags:
  *       - Events
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: category
+ *         name: liked
+ *         schema:
+ *           type: string
+ *           example: 'true'
+ *         description: Set to 'true' to return only liked events by the user. Defaults to 'false'
+ *       - in: query
+ *         name: registered
+ *         schema:
+ *           type: string
+ *           example: 'true'
+ *         description: Set to 'true' to return only events the user is registered for (non-cancelled)
+ *       - in: query
+ *         name: categories
  *         schema:
  *           type: string
  *           example: '1,3'
- *         description: Comma-separated list of category IDs
+ *         description: Comma-separated list of category IDs to filter by category
  *       - in: query
  *         name: city
  *         schema:
@@ -36,15 +54,27 @@
  *         schema:
  *           type: string
  *           format: date
- *           example: '2000-01-01'
+ *           example: '2025-01-01'
  *         description: Start of date range (YYYY-MM-DD)
  *       - in: query
  *         name: end_date
  *         schema:
  *           type: string
  *           format: date
- *           example: '2000-01-01'
+ *           example: '2025-12-31'
  *         description: End of date range (YYYY-MM-DD)
+ *       - in: query
+ *         name: ongoing
+ *         schema:
+ *           type: string
+ *           example: 'true'
+ *         description: set to 'true' to return ongoing events. Defaults to 'false'
+ *       - in: query
+ *         name: completed
+ *         schema:
+ *           type: string
+ *           example: 'false'
+ *         description: Filter by completed events. 'true' = past, 'false' = ongoing/future
  *       - in: query
  *         name: search
  *         schema:
@@ -63,14 +93,14 @@
  *         schema:
  *           type: integer
  *           minimum: 1
- *           example: 5
+ *           example: 10
  *         description: Number of events to return (default 20)
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
  *           minimum: 0
- *           example: 10
+ *           example: 0
  *         description: Offset to start from (default 0)
  *     responses:
  *       200:
@@ -93,7 +123,7 @@
  *                     example: 'Music Concert'
  *                   description:
  *                     type: string
- *                     example: 'lorem ipsum dolor sit amet consectetutoe avif loremsum.'
+ *                     example: 'Event description here.'
  *                   category:
  *                     type: integer
  *                     example: 2
@@ -111,37 +141,42 @@
  *                     example: 'Lebanon'
  *                   full_address:
  *                     type: string
- *                     example: 'The Music Hall, Starco Center, Omar Daouk Street, Downtown.'
+ *                     example: 'Downtown Hall, Main Street'
  *                   start_date:
  *                     type: string
- *                     example: '2025-01-01'
+ *                     format: date
+ *                     example: '2025-09-10'
  *                   start_time:
  *                     type: string
  *                     example: '19:00'
  *                   end_date:
  *                     type: string
- *                     example: '2025-01-01'
+ *                     format: date
+ *                     example: '2025-09-12'
  *                   end_time:
  *                     type: string
- *                     example: '19:00'
+ *                     example: '23:00'
  *                   registration_deadline_date:
  *                     type: string
- *                     example: '2025-01-01'
+ *                     example: '2025-09-01'
  *                   registration_deadline_time:
  *                     type: string
- *                     example: '19:00'
+ *                     example: '23:59'
  *                   cancellation_deadline_date:
  *                     type: string
- *                     example: '2025-01-01'
+ *                     example: '2025-09-05'
  *                   cancellation_deadline_time:
  *                     type: string
- *                     example: '19:00'
+ *                     example: '23:59'
  *                   organizer_name:
  *                     type: string
  *                     example: 'Nancy Ajram'
  *                   organizer_id:
  *                     type: integer
  *                     example: 11
+ *                   organizer_profile_pic:
+ *                     type: string
+ *                     example: 'https://host.com/profile.png'
  *                   likes:
  *                     type: integer
  *                     example: 2048
@@ -153,13 +188,20 @@
  *                     example: 5000
  *                   status:
  *                     type: string
- *                     example: 'active/cancelled/deleted'
+ *                     example: 'active'
  *                   suspended:
  *                     type: string
- *                     example: 'true/false'
+ *                     example: 'false'
  *                   date_created:
  *                     type: string
- *                     example: '2025-01-01'
+ *                     example: '2025-08-01'
+ *                   isLikedByUser:
+ *                     type: boolean
+ *                     example: true
+ *                   registration_status:
+ *                     type: string
+ *                     example: 'confirmed'
+ *                     description: Only returned when `registered=true` is passed
  *       500:
  *         description: Internal server error
  */
@@ -452,10 +494,15 @@ router.get("/", authMiddleware, (req, res) => {
     categories,
     start_date,
     end_date,
+    ongoing,
+    completed = "false",
     city,
     sort,
     limit = 20,
     offset = 0,
+    liked = "false",
+    registered = "false",
+    owned = 'false'
   } = req.query;
 
   // Normalize
@@ -464,8 +511,21 @@ router.get("/", authMiddleware, (req, res) => {
   if (isNaN(limit)) limit = 20;
   if (isNaN(offset)) offset = 0;
 
-  const conditions = ["events.status = 'active'"];
+  // no one can see deleted events
+  const conditions = ["events.status != 'deleted'"];
   const params = [];
+
+  // regular users can't see suspended events (suspended by admin)
+  if (req.user.account_type === "regular")
+    conditions.push("events.suspended != 'true'");
+
+  // organizers can see suspended events ONLY IF the own them
+  if (req.user.account_type === "organizer") {
+    conditions.push(
+      "(events.suspended != 'true' OR (events.suspended = 'true' AND events.organizer_id = ?))"
+    );
+    params.push(req.user.id);
+  }
 
   if (search) {
     conditions.push("(events.title LIKE ? OR users.organizer_name LIKE ?)");
@@ -495,9 +555,32 @@ router.get("/", authMiddleware, (req, res) => {
     params.push(end_date);
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
+  if (ongoing === "true") {
+    conditions.push("events.start_date <= ?");
+    conditions.push("events.end_date >= ?");
+    params.push(today, today);
+  }
+
+  if (completed) {
+    if (completed === "true" ) {
+      conditions.push("events.end_date < ?");
+      params.push(today);
+    } else if (completed === "false") {
+      conditions.push("events.end_date >= ?");
+      params.push(today);
+    }
+  }
+
   if (city) {
     conditions.push("LOWER(events.city) = ?");
     params.push(city.toLowerCase());
+  }
+
+  if (owned === 'true') {
+    conditions.push("events.organizer_id = ?");
+    params.push(req.user.id)
   }
 
   // Sorting logic
@@ -514,14 +597,33 @@ router.get("/", authMiddleware, (req, res) => {
     : "";
 
   const sql = `
-    SELECT events.*, users.organizer_name, categories.category_name
+    SELECT 
+      events.*, 
+      users.organizer_name, 
+      users.profile_pic AS organizer_profile_pic,
+      categories.category_name, 
+      ${registered === "true" ? "r.status AS registration_status," : ""}
+      (likes.event_id IS NOT NULL) AS isLikedByUser
     FROM events
     JOIN users ON users.id = events.organizer_id
     JOIN categories ON categories.id = events.category
+    ${
+      liked === "true" ? "JOIN" : "LEFT JOIN"
+    } likes ON likes.event_id = events.id AND likes.user_id = ?
+    ${
+      registered === "true"
+        ? "JOIN registrations r ON r.event_id = events.id AND r.user_id = ? AND r.status != 'cancelled' "
+        : ""
+    }
     ${whereClause}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `;
+
+  // add user id for likes table joining
+  params.unshift(req.user.id);
+  // add user id for registrations table joining
+  if (registered === "true") params.unshift(req.user.id);
 
   params.push(limit, offset);
 
