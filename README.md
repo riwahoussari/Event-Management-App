@@ -57,8 +57,8 @@ A modern full-stack event discovery and management platform built with **React +
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/event-app.git
-cd event-app
+git clone git clone https://github.com/riwahoussari/Event-Management-App.git
+cd Event-Management-App
 ```
 ### 2️⃣ Start the Client (port 4173)
 ```bash
