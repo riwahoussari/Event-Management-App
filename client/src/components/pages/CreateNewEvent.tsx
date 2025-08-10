@@ -23,7 +23,8 @@ export function CreateEventPage() {
   const { user } = useUser();
   if (user?.account_type !== "organizer") return <NotFoundPage />;
   const navigate = useNavigate();
-
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [eventBannerUrl, setEventBannerUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -47,7 +48,7 @@ export function CreateEventPage() {
     {
       method: "POST",
       body: {
-        event_banner: '',
+        event_banner: eventBannerUrl,
         title,
         category,
         description,
@@ -84,10 +85,37 @@ export function CreateEventPage() {
     }
   }, [error, data, catError]);
 
+  async function handleSubmit() {
+    try {
+      // If a file is selected, upload to Cloudinary
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append("file", selectedImage);
+        formData.append("upload_preset", "my_unsigned_preset");
+
+        const cloudRes = await fetch(
+          `https://api.cloudinary.com/v1_1/dlgft1vm9/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!cloudRes.ok) throw new Error("Image upload failed");
+
+        const cloudData = await cloudRes.json();
+        setEventBannerUrl(cloudData.secure_url);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Couldn't upload Event Banner.");
+    }
+  }
+
   return (
     <main>
       <div className="space-y-14">
-        <Button size={"lg"} onClick={refetch}>
+        <Button size={"lg"} onClick={handleSubmit}>
           {loading ? "Creating Event..." : "Create Event"}
         </Button>
         <div className="flex flex-wrap gap-10 justify-between">
@@ -95,11 +123,16 @@ export function CreateEventPage() {
           <div className="flex flex-col gap-12 min-w-[300px] max-w-[600px] w-[28%]">
             <div className="space-y-1">
               <Label className="text-xl font-normal">Event Banner</Label>
-              <img
-                src={"/event-banner-placeholder.png"}
+
+              <Input
                 className="bg-cover bg-center bg-foreground/20 w-full aspect-16/9 rounded-lg"
-                style={{
-                  backgroundImage: "url('/event-banner-placeholder.png')",
+                name="profile_pic"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedImage(e.target.files[0]);
+                  }
                 }}
               />
             </div>
@@ -233,7 +266,10 @@ export function CreateEventPage() {
                 <Label className="text-xl font-normal">Tags</Label>
                 <div className="flex gap-3 flex-wrap items-start">
                   {tags.map((tag, i) => (
-                    <div key={i} className="flex capitalize gap-3 text-xl! rounded-full py-2 px-4  bg-foreground/20">
+                    <div
+                      key={i}
+                      className="flex capitalize gap-3 text-xl! rounded-full py-2 px-4  bg-foreground/20"
+                    >
                       <p>{tag}</p>
 
                       <p

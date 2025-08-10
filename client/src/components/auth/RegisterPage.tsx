@@ -28,6 +28,7 @@ const registerSchema = z.object({
   birthday: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  profile_pic: z.string().optional(),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -35,6 +36,8 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const { setUser } = useUser();
   const navigate = useNavigate();
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -56,13 +59,36 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      let profilePicUrl = "";
+
+      // If a file is selected, upload to Cloudinary
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append("file", selectedImage);
+        formData.append("upload_preset", "my_unsigned_preset"); // from Cloudinary settings
+
+        const cloudRes = await fetch(
+          `https://api.cloudinary.com/v1_1/dlgft1vm9/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!cloudRes.ok) throw new Error("Image upload failed");
+
+        const cloudData = await cloudRes.json();
+        profilePicUrl = cloudData.secure_url;
+      }
+
+      // Send to backend with profile_pic field
       const res = await fetch("/api/auth/register", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, profile_pic: profilePicUrl }),
       });
 
       // on success set user in context and go to homepage
@@ -87,6 +113,19 @@ export default function RegisterPage() {
     <AuthFormWrapper title="register">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormItem>
+            <Label>Profile Picture</Label>
+            <Input
+              name="profile_pic"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setSelectedImage(e.target.files[0]);
+                }
+              }}
+            />
+          </FormItem>
           <FormField
             control={form.control}
             name="fullname"
