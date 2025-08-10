@@ -29,11 +29,11 @@ export default function EventCard({
     registration_status && registration_status === "denied";
 
   return (
-    <div className="rounded-2xl ">
+    <div className="sm:rounded-2xl rounded-lg w-full max-w-[500px]">
       {/* image wrapper */}
-      <div className=" relative rounded-2xl border-1 overflow-hidden border-foreground/50 shadow-foreground/10 shadow-md ">
+      <div className=" relative sm:rounded-2xl rounded-lg border-1 overflow-hidden border-foreground/50 shadow-foreground/10 shadow-md ">
         {/* event banner */}
-        <div className="relative z-0 h-70 aspect-16/9">
+        <div className="relative z-0  aspect-16/9">
           <img
             className="w-full h-full object-cover"
             src={event_banner || "/event-banner-placeholder.png"}
@@ -51,7 +51,7 @@ export default function EventCard({
                     ? "var(--color-red-300)"
                     : "var(--color-green-300)",
               }}
-              className=" absolute z-2 shadow-black/50 top-0 left-0 right-0 p-2 text-xl font-medium bg-red-300 text-black text-center"
+              className=" absolute z-2 shadow-black/50 top-0 left-0 right-0 sm:p-2 p-1 sm:text-xl text-base font-medium bg-red-300 text-black text-center"
             >
               <p>
                 {isSuspended
@@ -70,7 +70,7 @@ export default function EventCard({
         )}
 
         {/* category */}
-        <p className="absolute z-2 bg-black uppercase font-medium text-lg text-white bottom-2 left-2 py-1 px-4 shadow-black/50 shadow-xl rounded-full ">
+        <p className="absolute z-2 bg-black uppercase font-medium sm:text-lg text-white bottom-2 left-2 sm:py-1 sm:px-4 py-0.5 px-3 shadow-black/50 sm:shadow-xl shadow-lg rounded-full ">
           {category}
         </p>
 
@@ -83,22 +83,22 @@ export default function EventCard({
       </div>
 
       {/* text content wrapper */}
-      <div className="flex gap-4 mt-4 flex-col">
+      <div className="flex sm:gap-4 gap-3 mt-4 flex-col">
         {/* title */}
         <Link
           to={`/event/${id}`}
-          className="hover:underline text-3xl leading-[0.9] font-black"
+          className="hover:underline sm:text-3xl text-2xl  leading-[0.9] font-black"
         >
           {title}
         </Link>
 
         {/* organizer & date */}
-        <div className="text-lg font-medium  flex items-center gap-6 text-foreground/60">
+        <div className="sm:text-lg font-medium  flex items-center sm:gap-6 gap-4 text-foreground/60">
           <div className="flex gap-2 items-center">
             <img
               src={organizer_profile_pic}
               alt=""
-              className="w-10 h-10 rounded-full bg-gray-400"
+              className="sm:w-10 sm:h-10 w-8 h-8 rounded-full bg-gray-400"
             />
             <Link
               to={`/profile/${organizer_id}`}
@@ -112,11 +112,11 @@ export default function EventCard({
         </div>
 
         {/* tags */}
-        <div className="flex gap-3">
+        <div className="flex sm:gap-3 gap-1.5 flex-wrap">
           {tags?.split(",").map((tag, i) => (
             <p
               key={i}
-              className=" bg-foreground/10 text-lg font-medium text-foreground bottom-2 left-2 py-1 px-4 rounded-full capitalize "
+              className=" bg-foreground/10 sm:text-lg font-medium text-foreground bottom-2 left-2 sm:py-1 py-0.5 sm:px-4 px-3 rounded-full capitalize "
             >
               {tag}
             </p>
@@ -185,10 +185,10 @@ function LikeButton({
 
 export function SkeletonCard() {
   return (
-    <div className="rounded-2xl ">
+    <div className="sm:rounded-2xl rounded-lg w-full max-w-[500px] ">
       {/* image wrapper */}
-      <div className="relative rounded-2xl overflow-hidden ">
-        <Skeleton className="h-70 aspect-16/9" />
+      <div className="relative sm:rounded-2xl rounded-lg border-1 overflow-hidden border-foreground/50 shadow-foreground/10 shadow-md ">
+        <Skeleton className="aspect-16/9" />
       </div>
 
       {/* text content wrapper */}

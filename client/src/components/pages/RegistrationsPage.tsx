@@ -21,10 +21,10 @@ export default function RegistrationsPage() {
   // Build query string based on selected tab
   const query = (() => {
     if (selectedTab === "complete")
-      return `/api/events?registered=true&end_date=${yesterday}&completed=true`;
+      return `/api/events?registerId=${user?.id}&end_date=${yesterday}&completed=true`;
     if (selectedTab === "upcoming")
-      return `/api/events?registered=true&start_date=${tomorrow}`;
-    return `/api/events?registered=true&ongoing=true`; // ongoing
+      return `/api/events?registerId=${user?.id}&start_date=${tomorrow}`;
+    return `/api/events?registerId=${user?.id}&ongoing=true`; // ongoing
   })();
 
   const { data, error } = useFetch<EventType[]>(query);
@@ -39,22 +39,22 @@ export default function RegistrationsPage() {
   }, [error]);
 
   return (
-    <main className="space-y-14 p-14">
+    <main >
       {/* tabs */}
       <div>
         <Tabs
           onValueChange={setSelectedTab}
           defaultValue="ongoing"
-          className="w-[400px]"
+          className="max-w-[400px] w-full"
         >
           <TabsList className="h-12">
-            <TabsTrigger className="text-lg p-4" value="complete">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="complete">
               Completed
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="ongoing">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="ongoing">
               Ongoing
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="upcoming">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="upcoming">
               Upcoming
             </TabsTrigger>
           </TabsList>
@@ -80,6 +80,7 @@ export default function RegistrationsPage() {
                 tags={event.tags}
                 isLikedByUser={event.isLikedByUser}
                 registration_status={event.registration_status}
+                suspended={event.suspended}
               />
             ))
           : [1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}

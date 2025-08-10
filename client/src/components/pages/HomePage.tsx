@@ -13,10 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "../ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -80,8 +80,8 @@ export default function HomePage() {
     if (filters.end_date) params.append("end_date", filters.end_date);
     if (catFilter.length > 0) params.append("categories", catFilter.join(","));
 
-    // don't show completed events
-
+    // show completed events only for admin
+    if (user?.account_type === "admin") params.append("completed", "none");
 
     return `/api/events?${params.toString()}`;
   };
@@ -93,108 +93,110 @@ export default function HomePage() {
   // Show toast if there's an error
   useEffect(() => {
     if (error || catError) {
-      toast.error("Failed to load events", {
+      toast.error(`Failed to load ${error ? "events" : "categories"}`, {
         description: error || catError || "Something went wrong",
       });
     }
   }, [error, catError]);
 
   return (
-    <main className="space-y-14 p-14">
+    <main>
       {/* search - filter - sort - categories */}
       <div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           {/* search bar */}
-          <div>
+          <div className="w-full">
             <Label>
               <p className="opacity-80 ms-1 mb-1">Search: </p>
             </Label>
             <Input
               onChange={(e) => setSearchValue(e.target.value)}
-              className="w-96 "
+              className="max-w-96 w-full "
               name="search"
               placeholder="by title or organizer name"
             />
           </div>
 
+          <div className="flex gap-4 flex-wrap">
           {/* sort select */}
-          <div>
-            <Label>
-              <p className="opacity-80 ms-1 mb-1">Sort:</p>
-            </Label>
-            <Select onValueChange={setSortValue} defaultValue="closest">
-              <SelectTrigger>
-                <SelectValue placeholder="Sort" defaultValue="closest" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="closest">Nearest Date</SelectItem>
-                <SelectItem value="popular">Most Popular</SelectItem>
-                <SelectItem value="deadline">Nearset Deadline</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label>
+                <p className="opacity-80 ms-1 mb-1">Sort:</p>
+              </Label>
+              <Select onValueChange={setSortValue} defaultValue="closest">
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort" defaultValue="closest" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="closest">Nearest Date</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                  <SelectItem value="deadline">Nearset Deadline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* filter popover */}
-          <div>
-            <Label>
-              <p className="opacity-80 ms-1 mb-1">Filter:</p>
-            </Label>
+            {/* filter Dialog */}
+            <div>
+              <Label>
+                <p className="opacity-80 ms-1 mb-1">Filter:</p>
+              </Label>
 
-            <Popover open={popOpen} onOpenChange={setPopOpen}>
-              <PopoverTrigger>
-                <Button variant="outline" className="font-normal">
-                  Select Filters
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent>
-                {/* city */}
-                <div className="mb-5">
-                  <Label>
-                    <p className="text-base mb-0.5 ms-1 font-normal ">City</p>
-                  </Label>
-                  <Input
-                    ref={cityRef}
-                    defaultValue={filters.city || ""}
-                    placeholder="city"
-                    type="text"
-                  />
-                </div>
-                {/* start date */}
-                <div className="mb-5">
-                  <Label>
-                    <p className="text-base mb-0.5 ms-1 font-normal ">
-                      Starts After
-                    </p>
-                  </Label>
-                  <Input
-                    ref={startDateRef}
-                    defaultValue={filters.start_date || ""}
-                    placeholder="city"
-                    type="date"
-                  />
-                </div>
-                {/* end date */}
-                <div className="mb-5">
-                  <Label>
-                    <p className="text-base mb-0.5 ms-1 font-normal ">
-                      Ends Before
-                    </p>
-                  </Label>
-                  <Input
-                    ref={endDateRef}
-                    defaultValue={filters.end_date || ""}
-                    placeholder="city"
-                    type="date"
-                  />
-                </div>
-                <div className="flex gap-5">
-                  <Button onClick={applyFilters}>Apply Filters</Button>
-                  <Button onClick={clearFilters} variant={"outline"}>
-                    Clear Filters
+              <Dialog open={popOpen} onOpenChange={setPopOpen}>
+                <DialogTrigger>
+                  <Button variant="outline" className="font-normal">
+                    Select Filters
                   </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </DialogTrigger>
+                <DialogContent>
+                  {/* city */}
+                  <div className="mb-5">
+                    <Label>
+                      <p className="text-base mb-0.5 ms-1 font-normal ">City</p>
+                    </Label>
+                    <Input
+                      ref={cityRef}
+                      defaultValue={filters.city || ""}
+                      placeholder="city"
+                      type="text"
+                    />
+                  </div>
+                  {/* start date */}
+                  <div className="mb-5">
+                    <Label>
+                      <p className="text-base mb-0.5 ms-1 font-normal ">
+                        Starts After
+                      </p>
+                    </Label>
+                    <Input
+                      ref={startDateRef}
+                      defaultValue={filters.start_date || ""}
+                      placeholder="city"
+                      type="date"
+                    />
+                  </div>
+                  {/* end date */}
+                  <div className="mb-5">
+                    <Label>
+                      <p className="text-base mb-0.5 ms-1 font-normal ">
+                        Ends Before
+                      </p>
+                    </Label>
+                    <Input
+                      ref={endDateRef}
+                      defaultValue={filters.end_date || ""}
+                      placeholder="city"
+                      type="date"
+                    />
+                  </div>
+                  <div className="flex gap-5">
+                    <Button onClick={applyFilters}>Apply Filters</Button>
+                    <Button onClick={clearFilters} variant={"outline"}>
+                      Clear Filters
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
 
@@ -202,13 +204,13 @@ export default function HomePage() {
         <ToggleGroup
           onValueChange={setCatFilter}
           type="multiple"
-          className="mt-6"
+          className="mt-6 flex-wrap "
         >
           {categories ? (
             categories.map((cat) => (
               <ToggleGroupItem
                 variant="outline"
-                className="rounded-full! font-medium text-foreground/80 px-6 border-2! text-lg mx-1.5 cursor-pointer"
+                className="rounded-full! capitalize font-medium text-foreground/80 px-6 min-w-[110px]! max-w-[110px] border-2! text-base sm:text-lg m-1.5 cursor-pointer"
                 key={cat.id}
                 value={cat.id.toString()}
               >
@@ -232,7 +234,9 @@ export default function HomePage() {
                 event_banner={event.event_banner}
                 category={event.category_name}
                 status={event.status}
-                suspended={user.account_type !== 'regular' ? event.suspended : undefined}
+                suspended={
+                  user.account_type !== "regular" ? event.suspended : undefined
+                }
                 organizer_id={event.organizer_id}
                 organizer_name={event.organizer_name}
                 start_date={event.start_date}

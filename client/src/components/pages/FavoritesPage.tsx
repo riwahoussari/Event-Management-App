@@ -39,22 +39,22 @@ export default function FavoritesPage() {
   }, [error]);
 
   return (
-    <main className="space-y-14 p-14">
+    <main >
       {/* tabs */}
       <div>
         <Tabs
           onValueChange={setSelectedTab}
           defaultValue="ongoing"
-          className="w-[400px]"
+          className="max-w-[400px] w-full"
         >
           <TabsList className="h-12">
-            <TabsTrigger className="text-lg p-4" value="complete">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="complete">
               Completed
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="ongoing">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="ongoing">
               Ongoing
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="upcoming">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="upcoming">
               Upcoming
             </TabsTrigger>
           </TabsList>
@@ -79,6 +79,7 @@ export default function FavoritesPage() {
                 user={user}
                 tags={event.tags}
                 isLikedByUser={event.isLikedByUser}
+                suspended={event.suspended}
               />
             ))
           : [1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}

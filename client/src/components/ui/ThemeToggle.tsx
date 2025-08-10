@@ -9,6 +9,7 @@ export function ThemeToggle() {
     <div className="fixed z-100 bottom-6 right-6">
       <Button
         variant="outline"
+        className="bg-background!"
         size="icon"
         onClick={() => {
           if (theme === "dark") setTheme("light");

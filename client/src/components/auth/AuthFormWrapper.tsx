@@ -13,7 +13,7 @@ export default function AuthFormWrapper({
     <div className="flex items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">{title}</CardTitle>
+          <CardTitle className="text-2xl text-center capitalize">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* form goes here */}
@@ -22,12 +22,12 @@ export default function AuthFormWrapper({
           <p className="mt-4 text-center text-sm">
             {title === "register"
               ? "Already have an account? "
-              : "Don't have an accout?"}
+              : "Don't have an accout? "}
             <Link
               to={title === "register" ? "/login" : "/register"}
               className="text-blue-400 hover:underline"
             >
-              {title === "register" ? "Login here" : "Register here"}
+              {title === "register" ? " Login here" : " Register here"}
             </Link>
           </p>
         </CardContent>

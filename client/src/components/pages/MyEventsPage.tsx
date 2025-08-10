@@ -6,12 +6,14 @@ import { toast } from "sonner";
 import EventCard, { SkeletonCard } from "../events/EventCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NotFoundPage from "./NotFoundPage";
+import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 export default function MyEventsPage() {
   const { user } = useUser();
 
   // admins and regular users don't have favorites page
-  if (user?.account_type !== 'organizer') return <NotFoundPage />
+  if (user?.account_type !== "organizer") return <NotFoundPage />;
 
   const [selectedTab, setSelectedTab] = useState("ongoing");
 
@@ -21,10 +23,10 @@ export default function MyEventsPage() {
   // Build query string based on selected tab
   const query = (() => {
     if (selectedTab === "complete")
-      return `/api/events?owned=true&end_date=${yesterday}&completed=true`;
+      return `/api/events?owner=${user.id}&end_date=${yesterday}&completed=true`;
     if (selectedTab === "upcoming")
-      return `/api/events?owned=true&start_date=${tomorrow}`;
-    return `/api/events?owned=true&ongoing=true`; // ongoing
+      return `/api/events?owner=${user.id}&start_date=${tomorrow}`;
+    return `/api/events?owner=${user.id}&ongoing=true`; // ongoing
   })();
 
   const { data, error } = useFetch<EventType[]>(query);
@@ -39,26 +41,30 @@ export default function MyEventsPage() {
   }, [error]);
 
   return (
-    <main className="space-y-14 p-14">
+    <main>
       {/* tabs */}
-      <div>
+      <div className="flex justify-between items-center gap-x-6 gap-y-4 flex-wrap-reverse">
         <Tabs
           onValueChange={setSelectedTab}
           defaultValue="ongoing"
-          className="w-[400px]"
+          className="max-w-[400px] w-full"
         >
           <TabsList className="h-12">
-            <TabsTrigger className="text-lg p-4" value="complete">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="complete">
               Completed
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="ongoing">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="ongoing">
               Ongoing
             </TabsTrigger>
-            <TabsTrigger className="text-lg p-4" value="upcoming">
+            <TabsTrigger className="sm:text-lg sm:p-4 p-3" value="upcoming">
               Upcoming
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        <Link to="/create-event">
+          <Button size={"lg"}>Create New Event</Button>
+        </Link>
       </div>
 
       {/* cards */}
@@ -78,6 +84,7 @@ export default function MyEventsPage() {
                 end_date={event.end_date}
                 user={user}
                 tags={event.tags}
+                suspended={event.suspended}
                 isLikedByUser={event.isLikedByUser}
               />
             ))
