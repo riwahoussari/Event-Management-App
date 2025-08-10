@@ -6,6 +6,59 @@
 
 /**
  * @swagger
+ * /api/promotion-requests/{userId}:
+ *   get:
+ *     summary: Check if a user has a pending promotion request
+ *     description: |
+ *       Returns the **latest pending promotion request** for the specified user.
+ *
+ *       **Access rules:**
+ *       - **Admin**: Can check for any user.
+ *       - **User**: Can only check their own request.
+ *       - Returns **404** if no pending request exists.
+ *     tags:
+ *       - Promotion Requests
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the user to check.
+ *     responses:
+ *       200:
+ *         description: Latest pending promotion request found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 12
+ *                 user_id:
+ *                   type: integer
+ *                   example: 5
+ *                 status:
+ *                   type: string
+ *                   example: pending
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-08-01T12:34:56Z"
+ *                 additional_info:
+ *                   type: string
+ *                   example: "Reason for promotion..."
+ *       403:
+ *         description: Forbidden – User is not authorized to view this request.
+ *       500:
+ *         description: Database error.
+ */
+
+/**
+ * @swagger
  * /api/promotion-requests:
  *   post:
  *     summary: Submit a promotion request (regular users only)
@@ -133,11 +186,38 @@ const router = express.Router();
 const db = require("../db/db-connection");
 const authMiddleware = require("../middleware/auth");
 
+// GET /api/promotion-requests/:userId - Check if user has a pending promotion request
+router.get("/:userId", authMiddleware, (req, res) => {
+  const { userId } = req.params;
+
+  // Only admin or the user himself
+  if (req.user.account_type !== "admin" && req.user.id !== parseInt(userId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const sql = `
+    SELECT *
+    FROM promotion_requests
+    WHERE user_id = ? AND status = 'pending'
+    ORDER BY request_date DESC
+    LIMIT 1
+  `;
+
+  db.get(sql, [userId], (err, row) => {
+    if (err) {
+      console.error("DB error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.status(200).json(row);
+  });
+});
+
 // POST /api/promotion-requests – user submits request to become organizer
 router.post("/", authMiddleware, (req, res) => {
   const userId = req.user.id;
 
-  if (req.user.account_type !== "user") {
+  if (req.user.account_type !== "regular") {
     return res
       .status(403)
       .json({ error: "Only regular users can request promotion" });
@@ -241,7 +321,9 @@ router.patch("/:userId/reject", authMiddleware, (req, res) => {
   db.run(sql, [userId], function (err) {
     if (err) return res.status(500).json({ error: "DB error" });
     if (this.changes === 0)
-      return res.status(404).json({ error: "Pending promotion request not found" });
+      return res
+        .status(404)
+        .json({ error: "Pending promotion request not found" });
 
     return res.json({ message: "Promotion request rejected" });
   });

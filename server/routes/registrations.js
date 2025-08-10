@@ -53,9 +53,9 @@
  *         description: Registration cancelled
  *       404:
  *         description: Registration not found
-*/
+ */
 
-/** 
+/**
  * @swagger
  *   /api/events/{id}/registrations:
  *     get:
@@ -102,7 +102,7 @@
  *           description: Access denied
  *         404:
  *           description: Event not found
-*/
+ */
 
 /**
  * @swagger
@@ -149,7 +149,7 @@
  *           description: Unauthorized or not the event owner
  *         404:
  *           description: Event or registration not found
- *   
+ *
  */
 
 const express = require("express");
@@ -170,7 +170,13 @@ router.post("/:id/register", authMiddleware, (req, res) => {
   const checkSql = `SELECT * FROM registrations WHERE user_id = ? AND event_id = ?`;
   db.get(checkSql, [userId, eventId], (err, row) => {
     if (err) return res.status(500).json({ error: "DB error" });
-    if (row) return res.status(409).json({ error: "Already registered" });
+    if (row) {
+      if (row.status === "active") {
+        return res.status(409).json({ error: "Already registered" });
+      } else if (row.status === "denied") {
+        return res.status(403).json({ error: "Your Registration is Denied" });
+      }
+    }
 
     // Check ownership - status - capacity - deadline
     const eventSql = `SELECT * FROM events WHERE id = ?`;
@@ -202,8 +208,18 @@ router.post("/:id/register", authMiddleware, (req, res) => {
           return res.status(400).json({ error: "Event is full" });
         }
 
-        const insertSql = `INSERT INTO registrations (user_id, event_id, registration_date) VALUES (?, ?, ?)`;
-        db.run(insertSql, [userId, eventId, today], (err) => {
+        let stmt = "";
+        const params = [userId, eventId];
+        if (row && row.status === "cancelled") {
+          stmt =
+            "UPDATE registrations SET status = 'active' WHERE user_id = ? AND event_id = ?";
+        } else {
+          stmt = `INSERT INTO registrations (user_id, event_id, registration_date) VALUES (?, ?, ?)`;
+          params.push(today);
+        }
+
+        db.run(stmt, params, (err) => {
+          console.log(err);
           if (err) return res.status(500).json({ error: "DB error" });
           return res.status(201).json({ message: "Registered successfully" });
         });

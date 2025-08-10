@@ -86,12 +86,26 @@ const router = express.Router();
 
 // GET /api/categories – Get all categories
 router.get("/", authMiddleware, (req, res) => {
-  let query = "SELECT id, category_name FROM categories";
+  const { detailed = "false" } = req.query;
+
+  let simpleQuery = "SELECT id, category_name FROM categories";
   if (req.user.account_type === "admin") {
-    query = "SELECT * FROM categories";
+    simpleQuery = "SELECT * FROM categories";
   }
 
-  db.all(query, (err, rows) => {
+  const detailedQuery = `
+    SELECT 
+      c.*,
+      COUNT(DISTINCT e.id) AS total_events,
+      COUNT(r.user_id) AS total_registrations
+    FROM categories c
+    LEFT JOIN events e ON c.id = e.category
+    LEFT JOIN registrations r ON e.id = r.event_id
+    GROUP BY c.id, c.category_name, c.date_created
+    ORDER BY c.category_name COLLATE NOCASE;
+  `;
+
+  db.all(detailed === "true" ? detailedQuery : simpleQuery, (err, rows) => {
     if (err) {
       console.error("Error fetching categories:", err);
       return res.status(500).json({ error: "Internal server error" });
@@ -100,7 +114,7 @@ router.get("/", authMiddleware, (req, res) => {
   });
 });
 
-// POST /api/categories - Create category– Admin only 
+// POST /api/categories - Create category– Admin only
 router.post("/", authMiddleware, (req, res) => {
   const { category_name } = req.body;
   const user = req.user;
@@ -118,22 +132,26 @@ router.post("/", authMiddleware, (req, res) => {
   const query =
     "INSERT INTO categories (category_name, date_created) VALUES (?, ?)";
 
-  db.run(query, [category_name.toLowerCase().trim(), date_created], function (err) {
-    if (err) {
-      if (err.message.includes("UNIQUE")) {
-        return res.status(409).json({ error: "Category already exists" });
+  db.run(
+    query,
+    [category_name.toLowerCase().trim(), date_created],
+    function (err) {
+      if (err) {
+        if (err.message.includes("UNIQUE")) {
+          return res.status(409).json({ error: "Category already exists" });
+        }
+        console.error("Error inserting category:", err);
+        return res.status(500).json({ error: "Internal server error" });
       }
-      console.error("Error inserting category:", err);
-      return res.status(500).json({ error: "Internal server error" });
-    }
 
-    res.status(201).json({
-      message: "Category created",
-      id: this.lastID,
-      category_name,
-      date_created,
-    });
-  });
+      res.status(201).json({
+        message: "Category created",
+        id: this.lastID,
+        category_name,
+        date_created,
+      });
+    }
+  );
 });
 
 module.exports = router;

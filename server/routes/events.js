@@ -18,7 +18,7 @@
  *       - deadline (by closest registration deadline)
  *       Results vary based on user role:
  *       - No one can see deleted events
- *       - Regular users cannot see suspended 
+ *       - Regular users cannot see suspended
  *       - Organizers can see their own suspended events
  *     tags:
  *       - Events
@@ -31,6 +31,12 @@
  *           type: string
  *           example: 'true'
  *         description: Set to 'true' to return only liked events by the user. Defaults to 'false'
+ *       - in: query
+ *         name: owner
+ *         schema:
+ *           type: integer
+ *           example: 3
+ *         description: set ownerId to filter by event owner.
  *       - in: query
  *         name: registered
  *         schema:
@@ -482,6 +488,93 @@
  *         description: Server error
  */
 
+/**
+ * @swagger
+ *
+ * paths:
+ *   /api/events/{id}/stats:
+ *     get:
+ *       summary: Get statistics for a single event
+ *       description: |
+ *         Returns various statistics for a specific event.  
+ *         Only the event organizer and admins can access this endpoint.
+ *       tags:
+ *         - Stats
+ *       security:
+ *         - bearerAuth: []
+ *       parameters:
+ *         - in: path
+ *           name: id
+ *           required: true
+ *           schema:
+ *             type: integer
+ *           description: ID of the event to retrieve stats for
+ *       responses:
+ *         '200':
+ *           description: Successful response with event statistics
+ *           content:
+ *             application/json:
+ *               schema:
+ *                 type: object
+ *                 properties:
+ *                   total_likes:
+ *                     type: integer
+ *                     example: 35
+ *                   total_views:
+ *                     type: integer
+ *                     example: 1500
+ *                   total_registrations:
+ *                     type: integer
+ *                     example: 120
+ *                   total_active_registrations:
+ *                     type: integer
+ *                     example: 100
+ *                   total_cancelled_registrations:
+ *                     type: integer
+ *                     example: 15
+ *                   total_denied_registrations:
+ *                     type: integer
+ *                     example: 5
+ *                   conversion_rate:
+ *                     type: number
+ *                     format: float
+ *                     example: 8.0
+ *                     description: Percentage of views converted to registrations
+ *                   registrations_last_6_months:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         month:
+ *                           type: string
+ *                           example: "2025-03"
+ *                         count:
+ *                           type: integer
+ *                           example: 20
+ *                   total_attendants:
+ *                     type: integer
+ *                     example: 90
+ *                   attendance_rate:
+ *                     type: number
+ *                     format: float
+ *                     example: 90.0
+ *                     description: Percentage of active registrations who attended
+ *                   female_registrations:
+ *                     type: integer
+ *                     example: 60
+ *                   male_registrations:
+ *                     type: integer
+ *                     example: 60
+ *         '400':
+ *           description: Invalid event ID
+ *         '403':
+ *           description: Access denied (not admin or event organizer)
+ *         '404':
+ *           description: Event not found
+ *         '500':
+ *           description: Database error
+*/
+
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth");
@@ -501,8 +594,8 @@ router.get("/", authMiddleware, (req, res) => {
     limit = 20,
     offset = 0,
     liked = "false",
-    registered = "false",
-    owned = 'false'
+    registerId = "0",
+    owner = "0",
   } = req.query;
 
   // Normalize
@@ -564,7 +657,7 @@ router.get("/", authMiddleware, (req, res) => {
   }
 
   if (completed) {
-    if (completed === "true" ) {
+    if (completed === "true") {
       conditions.push("events.end_date < ?");
       params.push(today);
     } else if (completed === "false") {
@@ -578,9 +671,25 @@ router.get("/", authMiddleware, (req, res) => {
     params.push(city.toLowerCase());
   }
 
-  if (owned === 'true') {
+  const ownerId = parseInt(owner);
+  if (!isNaN(ownerId) && ownerId !== 0) {
     conditions.push("events.organizer_id = ?");
-    params.push(req.user.id)
+    params.push(ownerId);
+  }
+
+  // registrations filter
+  let regId = 0;
+  let parsedId = parseInt(registerId);
+  if (!isNaN(parsedId) && parsedId !== 0) {
+    if (req.user.account_type === "admin" || req.user.id === parsedId) {
+      regId = parsedId;
+    } else if (req.user.account_type === "organizer") {
+      conditions.push("events.organizer_id = ?");
+      params.push(req.user.id);
+      regId = parsedId;
+    } else {
+      return res.status(409).json({ error: "denied access register" });
+    }
   }
 
   // Sorting logic
@@ -602,7 +711,11 @@ router.get("/", authMiddleware, (req, res) => {
       users.organizer_name, 
       users.profile_pic AS organizer_profile_pic,
       categories.category_name, 
-      ${registered === "true" ? "r.status AS registration_status," : ""}
+      ${
+        regId !== 0
+          ? "r.status AS registration_status, r.registration_date, r.attendance,"
+          : ""
+      }
       (likes.event_id IS NOT NULL) AS isLikedByUser
     FROM events
     JOIN users ON users.id = events.organizer_id
@@ -611,7 +724,7 @@ router.get("/", authMiddleware, (req, res) => {
       liked === "true" ? "JOIN" : "LEFT JOIN"
     } likes ON likes.event_id = events.id AND likes.user_id = ?
     ${
-      registered === "true"
+      regId !== 0
         ? "JOIN registrations r ON r.event_id = events.id AND r.user_id = ? AND r.status != 'cancelled' "
         : ""
     }
@@ -620,10 +733,10 @@ router.get("/", authMiddleware, (req, res) => {
     LIMIT ? OFFSET ?
   `;
 
+  // add user id for registrations table joining
+  if (regId !== 0) params.unshift(regId);
   // add user id for likes table joining
   params.unshift(req.user.id);
-  // add user id for registrations table joining
-  if (registered === "true") params.unshift(req.user.id);
 
   params.push(limit, offset);
 
@@ -632,6 +745,7 @@ router.get("/", authMiddleware, (req, res) => {
       console.error("Error fetching events:", err);
       return res.status(500).json({ error: "Database error" });
     }
+
     res.status(200).json(rows);
   });
 });
@@ -646,14 +760,17 @@ router.get("/:id", authMiddleware, (req, res) => {
     SELECT 
       events.*, 
       users.organizer_name, 
-      categories.category_name 
+      users.profile_pic AS organizer_profile_pic,
+      categories.category_name,
+      r.status AS user_registration_status
     FROM events
     JOIN users ON users.id = events.organizer_id
     JOIN categories ON categories.id = events.category
+    LEFT JOIN registrations r ON r.user_id = ? AND r.event_id = ?
     WHERE events.id = ?
   `;
 
-  db.get(sql, [eventId], (err, event) => {
+  db.get(sql, [req.user.id, eventId, eventId], (err, event) => {
     if (err) return res.status(500).json({ error: "Database error." });
     if (!event) return res.status(404).json({ error: "Event not found." });
 
@@ -676,7 +793,7 @@ router.get("/:id", authMiddleware, (req, res) => {
         .json({ error: "Not authorized to view this event." });
     }
 
-    // Increment views count if visible
+    // Increment views count
     const incrementViews = `UPDATE events SET views_count = views_count + 1 WHERE id = ?`;
     db.run(incrementViews, [eventId], (err) => {
       if (err) console.error("Failed to increment views_count:", err);
@@ -853,18 +970,15 @@ router.patch("/:id", authMiddleware, (req, res) => {
     }
 
     // Disallow updates on cancelled/deleted/suspended/started events
-    if (
-      event.status === "cancelled" ||
-      event.status === "deleted" ||
-      event.suspended === "true"
-    ) {
+    if (event.status === "deleted" || event.suspended === "true") {
       return res.status(400).json({ error: "Cannot update inactive events" });
     }
 
     // prevent updating if event has started
-    const now = dayjs();
-    const eventStart = dayjs(`${event.start_date}T${event.start_time}`);
-    if (eventStart.isBefore(now)) {
+    const now = new Date();
+    const eventStart = new Date(`${event.start_date}T${event.start_time}`);
+
+    if (eventStart < now) {
       return res
         .status(400)
         .json({ message: "Cannot update an event that has already started" });
@@ -914,6 +1028,116 @@ router.patch("/:id", authMiddleware, (req, res) => {
       }
       return res.status(200).json({ message: "Event updated successfully" });
     });
+  });
+});
+
+// get event stats
+router.get("/:id/stats", authMiddleware, (req, res) => {
+  const eventId = parseInt(req.params.id);
+
+  const stats = {
+    total_likes: 0,
+    total_views: 0,
+    total_registrations: 0,
+    total_active_registrations: 0,
+    total_cancelled_registrations: 0,
+    total_denied_registrations: 0,
+    conversion_rate: 0,
+    registrations_last_6_months: [],
+    total_attendants: 0,
+    attendance_rate: 0,
+    female_registrations: 0,
+    male_registrations: 0,
+  };
+
+  // step 1 - check if event exists and get views
+  db.get("SELECT * FROM events WHERE id = ?", [eventId], (err, event) => {
+    if (err) {
+      return res.status(500).json({ error: "DB error" });
+    }
+    if (!event) {
+      return res.status(404).json({ error: "event not found" });
+    }
+
+    if (
+      req.user.account_type !== "admin" &&
+      req.user.id != event.organizer_id
+    ) {
+      return res.status(403).json({ error: "access denied" });
+    }
+
+    stats.total_views = event.views_count || 0;
+
+    // Step 2 — Total likes
+    db.get(
+      `SELECT COUNT(*) AS total_likes FROM likes WHERE event_id = ?`,
+      [eventId],
+      (err, row) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        stats.total_likes = row.total_likes || 0;
+
+        // Step 3 — Registrations
+        db.all(
+          `SELECT status, attendance, gender
+           FROM registrations
+           JOIN users ON registrations.user_id = users.id
+           WHERE event_id = ?`,
+          [eventId],
+          (err, rows) => {
+            if (err) return res.status(500).json({ error: "Database error" });
+
+            stats.total_registrations = rows.length;
+            rows.forEach((r) => {
+              // Count status
+              if (r.status === "active") stats.total_active_registrations++;
+              if (r.status === "cancelled")
+                stats.total_cancelled_registrations++;
+              if (r.status === "denied") stats.total_denied_registrations++;
+
+              // Count gender
+              if (r.gender === "male") stats.male_registrations++;
+              else if (r.gender === "female") stats.female_registrations++;
+
+              // Attendance
+              if (r.attendance === "true") stats.total_attendants++;
+            });
+
+            // Conversion rate
+            stats.conversion_rate =
+              stats.total_views > 0
+                ? parseFloat((rows.length / stats.total_views).toFixed(2)) * 100
+                : 0;
+
+            // Attendance rate
+            stats.attendance_rate =
+              stats.total_active_registrations > 0
+                ? parseFloat(
+                    (
+                      stats.total_attendants / stats.total_active_registrations
+                    ).toFixed(2)
+                  ) * 100
+                : 0;
+
+            // Step 4 — Registrations per month (last 6 months)
+            db.all(
+              `SELECT strftime('%Y-%m', registration_date) AS month, COUNT(*) AS count
+               FROM registrations
+               WHERE event_id = ?
+                 AND registration_date >= date('now', '-6 months')
+               GROUP BY month
+               ORDER BY month`,
+              [eventId],
+              (err, rows) => {
+                if (err)
+                  return res.status(500).json({ error: "Database error" });
+                stats.registrations_last_6_months = rows;
+                return res.status(200).json(stats);
+              }
+            );
+          }
+        );
+      }
+    );
   });
 });
 

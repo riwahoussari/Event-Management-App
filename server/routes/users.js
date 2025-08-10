@@ -336,6 +336,128 @@
  *               error: "Database error"
  */
 
+/**
+ * @swagger
+ * /api/users/{id}/organizer-stats:
+ *   get:
+ *     summary: Get detailed statistics for an organizer
+ *     description: |
+ *       Returns various statistics for a specific **organizer** user.
+ *       
+ *       **Access rules:**
+ *       - **Admin**: Can request stats for any organizer.
+ *       - **Organizer**: Can only request their own stats.
+ *       - Returns **404** if the specified user is not an organizer.
+ *       
+ *       **Statistics include:**
+ *       - Total events
+ *       - Total likes across all events
+ *       - Total views
+ *       - Total registrations (with breakdown by status)
+ *       - Average registrants per event
+ *       - Conversion rate (registrations / views)
+ *       - Events per category
+ *       - Registrations per month (last 6 months)
+ *       - Attendance metrics
+ *       - Gender distribution of registrations
+ *     tags:
+ *       - Stats
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The organizer's user ID.
+ *     responses:
+ *       200:
+ *         description: Organizer statistics retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total_events:
+ *                   type: integer
+ *                   example: 12
+ *                 total_likes:
+ *                   type: integer
+ *                   example: 345
+ *                 total_views:
+ *                   type: integer
+ *                   example: 5000
+ *                 total_registrations:
+ *                   type: integer
+ *                   example: 800
+ *                 total_active_registrations:
+ *                   type: integer
+ *                   example: 600
+ *                 total_cancelled_registrations:
+ *                   type: integer
+ *                   example: 150
+ *                 total_denied_registrations:
+ *                   type: integer
+ *                   example: 50
+ *                 avg_registrants_per_event:
+ *                   type: number
+ *                   format: float
+ *                   example: 50.0
+ *                 conversion_rate:
+ *                   type: number
+ *                   format: float
+ *                   description: Percentage value.
+ *                   example: 16.0
+ *                 events_per_category:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       category_name:
+ *                         type: string
+ *                         example: "Music"
+ *                       count:
+ *                         type: integer
+ *                         example: 4
+ *                 registrations_last_6_months:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       month:
+ *                         type: string
+ *                         example: "2025-03"
+ *                       count:
+ *                         type: integer
+ *                         example: 120
+ *                 total_attendants:
+ *                   type: integer
+ *                   example: 450
+ *                 avg_attendants_per_event:
+ *                   type: number
+ *                   format: float
+ *                   example: 37.5
+ *                 attendance_rate:
+ *                   type: number
+ *                   format: float
+ *                   description: Percentage value.
+ *                   example: 75.0
+ *                 female_registrations:
+ *                   type: integer
+ *                   example: 320
+ *                 male_registrations:
+ *                   type: integer
+ *                   example: 480
+ *       403:
+ *         description: Forbidden – User is not authorized to access these stats.
+ *       404:
+ *         description: User is not an organizer.
+ *       500:
+ *         description: Database error.
+ */
+
+
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth");
@@ -352,8 +474,8 @@ router.get("/:id", authMiddleware, (req, res) => {
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
     // No one can access any admin's profile except the admin himself
-    if (targetUser.account_type === "admin" && requester.id !== targetUser.id) {
-      return res.status(403).json({ error: "Access denied" });
+    if (targetUser.account_type === "admin" && requester.id !== targetUserId) {
+      return res.status(403).json({ error: "Access deniedd" });
     }
 
     const isSelf = requester.id === targetUserId;
@@ -368,8 +490,8 @@ router.get("/:id", authMiddleware, (req, res) => {
       return res.status(200).json(safeUser);
     }
 
-    // If a regular user is requesting a limited view of an organizer
-    if (isRegular && isTargetOrganizer) {
+    // If a regular user or organizer is requesting a limited view of another organizer
+    if ((isRegular || isOrganizer) && isTargetOrganizer) {
       const {
         id,
         account_type,
@@ -457,9 +579,9 @@ router.get("/", authMiddleware, (req, res) => {
   }
 
   if (search) {
-    filters.push(`(fullname LIKE ? OR email LIKE ? OR phone_number LIKE ?)`);
+    filters.push(`(fullname LIKE ? OR email LIKE ? OR phone_number LIKE ? OR organizer_name LIKE ?)`);
     const s = `%${search}%`;
-    values.push(s, s, s);
+    values.push(s, s, s, s);
   }
 
   // Sorting default = date_joined_most_recent
@@ -593,6 +715,179 @@ router.patch("/:id", authMiddleware, (req, res) => {
 
     return res.status(200).json({ message: "Profile updated successfully" });
   });
+});
+
+// GET /api/users/:id/organizer-stats – Organizer statistics
+router.get("/:id/organizer-stats", authMiddleware, (req, res) => {
+  const organizerId = parseInt(req.params.id);
+
+  // Authorization check
+  if (req.user.account_type !== "admin" && req.user.id !== organizerId) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+
+  const stats = {
+    total_events: 0,
+    total_likes: 0,
+    total_views: 0,
+    total_registrations: 0,
+    total_active_registrations: 0,
+    total_cancelled_registrations: 0,
+    total_denied_registrations: 0,
+    avg_registrants_per_event: 0,
+    conversion_rate: 0,
+    events_per_category: [],
+    registrations_last_6_months: [],
+    total_attendants: 0,
+    avg_attendants_per_event: 0,
+    attendance_rate: 0,
+    female_registrations: 0,
+    male_registrations: 0,
+  };
+
+  let eventIds = [];
+  let activeEvents = 0;
+
+  // step 0 - Make sure target user is an organizer
+  db.get(
+    `SELECT id FROM users WHERE id = ? AND account_type = 'organizer'`,
+    [organizerId],
+    (err, organizer) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+      if (!organizer) {
+        return res.status(404).json({ error: "Organizer not found" });
+      }
+
+      // Step 1 – Get organizer's events
+      db.all(
+        `SELECT id, category, views_count, status 
+       FROM events 
+       WHERE organizer_id = ?`,
+        [organizerId],
+        (err, events) => {
+          if (err) return res.status(500).json({ error: "Database error" });
+
+          stats.total_events = events.length;
+          events.forEach((event) => {
+            stats.total_views += event.views_count || 0;
+            activeEvents += event.status === "active" ? 1 : 0;
+            eventIds.push(event.id);
+          });
+
+          if (eventIds.length === 0) {
+            return res.json(stats); // No events → all stats stay 0
+          }
+
+          // Step 2 – Likes
+          db.get(
+            `SELECT COUNT(*) AS total_likes 
+       FROM likes 
+       WHERE event_id IN (${[...eventIds]})`,
+            (err, row) => {
+              if (err) return res.status(500).json({ error: "Database error" });
+              stats.total_likes = row.total_likes || 0;
+
+              // Step 3 – Registrations
+              db.all(
+                `SELECT r.status, r.attendance, u.gender 
+       FROM registrations r
+       JOIN users u ON r.user_id = u.id 
+       WHERE event_id IN (${[...eventIds]})`,
+                (err, rows) => {
+                  if (err)
+                    return res.status(500).json({ error: "Database error" });
+
+                  stats.total_registrations = rows.length;
+
+                  rows.forEach((row) => {
+                    stats.total_active_registrations +=
+                      row.status === "active" ? 1 : 0;
+                    stats.total_cancelled_registrations +=
+                      row.status === "cancelled" ? 1 : 0;
+                    stats.total_denied_registrations +=
+                      row.status === "denied" ? 1 : 0;
+                    stats.total_attendants += row.attendance === "true" ? 1 : 0;
+                    stats.female_registrations += row.gender === "female";
+                    stats.male_registrations += row.gender === "male";
+                  });
+
+                  stats.avg_registrants_per_event =
+                    activeEvents > 0
+                      ? parseFloat(
+                          (stats.total_registrations / activeEvents).toFixed(2)
+                        )
+                      : 0;
+
+                  stats.conversion_rate =
+                    stats.total_views > 0
+                      ? parseFloat(
+                          (
+                            stats.total_registrations / stats.total_views
+                          ).toFixed(2)
+                        ) * 100
+                      : 0;
+
+                  stats.avg_attendants_per_event =
+                    activeEvents > 0
+                      ? parseFloat(
+                          (stats.total_attendants / activeEvents).toFixed(2)
+                        )
+                      : 0;
+
+                  stats.attendance_rate =
+                    stats.total_active_registrations > 0
+                      ? parseFloat(
+                          (
+                            stats.total_attendants /
+                            stats.total_active_registrations
+                          ).toFixed(2)
+                        ) * 100
+                      : 0;
+
+                  // Step 4 – Events per category
+                  db.all(
+                    `SELECT categories.category_name, COUNT(*) AS count
+       FROM events
+       JOIN categories ON categories.id = events.category
+       WHERE events.organizer_id = ?
+       GROUP BY categories.category_name`,
+                    [organizerId],
+                    (err, rows) => {
+                      if (err)
+                        return res
+                          .status(500)
+                          .json({ error: "Database error" });
+                      stats.events_per_category = rows;
+
+                      // Step 5 – Registrations per month (last 6 months)
+                      db.all(
+                        `SELECT strftime('%Y-%m', registration_date) AS month, COUNT(*) AS count
+       FROM registrations
+       WHERE event_id IN (${[...eventIds]})
+         AND registration_date >= date('now', '-6 months')
+       GROUP BY month
+       ORDER BY month`,
+                        (err, rows) => {
+                          if (err)
+                            return res
+                              .status(500)
+                              .json({ error: "Database error" });
+                          stats.registrations_last_6_months = rows;
+
+                          // Final step – Return after all queries
+                          return res.status(200).json(stats);
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
 });
 
 module.exports = router;
